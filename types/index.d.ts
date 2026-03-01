@@ -27,19 +27,30 @@ declare type LoginUser = {
 
 declare type User = {
   $id: string;
+  id: string;
+  auth_id: string;
   email: string;
+  user_id: string;
   userId: string;
+  dwolla_customer_url: string;
   dwollaCustomerUrl: string;
+  dwolla_customer_id: string;
   dwollaCustomerId: string;
+  first_name: string;
   firstName: string;
+  last_name: string;
   lastName: string;
   name: string;
   address1: string;
   city: string;
   state: string;
+  postal_code: string;
   postalCode: string;
+  date_of_birth: string;
   dateOfBirth: string;
   ssn: string;
+  created_at: string;
+  updated_at: string;
 };
 
 declare type NewUserParams = {
@@ -67,29 +78,47 @@ declare type Transaction = {
   id: string;
   $id: string;
   name: string;
+  payment_channel: string;
   paymentChannel: string;
   type: string;
+  account_id: string;
   accountId: string;
   amount: number;
   pending: boolean;
   category: string;
   date: string;
   image: string;
-  type: string;
+  created_at: string;
   $createdAt: string;
   channel: string;
+  sender_id: string;
+  senderId: string;
+  sender_bank_id: string;
   senderBankId: string;
+  receiver_id: string;
+  receiverId: string;
+  receiver_bank_id: string;
   receiverBankId: string;
+  email: string;
 };
 
 declare type Bank = {
   $id: string;
-  accountId: string;
-  bankId: string;
-  accessToken: string;
-  fundingSourceUrl: string;
+  id: string;
+  user_id: string;
   userId: string;
+  account_id: string;
+  accountId: string;
+  bank_id: string;
+  bankId: string;
+  access_token: string;
+  accessToken: string;
+  funding_source_url: string;
+  fundingSourceUrl: string;
+  shareable_id: string;
   shareableId: string;
+  created_at: string;
+  updated_at: string;
 };
 
 declare type AccountTypes =
@@ -166,6 +195,10 @@ declare interface PageHeaderProps {
   topDescription: string;
   bottomDescription: string;
   connectBank?: boolean;
+}
+
+declare interface getAccountsProps {
+  userId: string;
 }
 
 declare interface PaginationProps {
@@ -257,9 +290,6 @@ declare interface PaymentTransferFormProps {
 }
 
 // Actions
-declare interface getAccountsProps {
-  userId: string;
-}
 
 declare interface getAccountProps {
   appwriteItemId: string;

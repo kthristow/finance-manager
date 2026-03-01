@@ -13,6 +13,12 @@ Sentry.init({
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
   debug: false,
 
+  // Disable undici integration to avoid compatibility issues with Node.js fetch
+  // This prevents "request.headers.split is not a function" errors
+  integrations: [
+    Sentry.httpIntegration(),
+  ],
+
   // uncomment the line below to enable Spotlight (https://spotlightjs.com)
   // spotlight: process.env.NODE_ENV === 'development',
   

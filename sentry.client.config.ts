@@ -27,4 +27,7 @@ Sentry.init({
       blockAllMedia: true,
     }),
   ],
+  
+  // Disable undici integration to avoid compatibility issues
+  defaultIntegrations: false,
 });

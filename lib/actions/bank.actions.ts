@@ -1,13 +1,6 @@
 "use server";
 
-import {
-  ACHClass,
-  CountryCode,
-  TransferAuthorizationCreateRequest,
-  TransferCreateRequest,
-  TransferNetwork,
-  TransferType,
-} from "plaid";
+import { CountryCode } from "plaid";
 
 import { plaidClient } from "../plaid";
 import { parseStringify } from "../utils";
@@ -25,9 +18,9 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
       banks?.map(async (bank: Bank) => {
         // get each account info from plaid
         const accountsResponse = await plaidClient.accountsGet({
-          access_token: bank.accessToken,
+          access_token: bank.access_token,
         });
-        console.log(bank.accessToken)
+        console.log(bank.access_token)
         const accountData = accountsResponse.data.accounts[0];
 
         // get institution info from plaid
@@ -45,8 +38,8 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
           mask: accountData.mask!,
           type: accountData.type as string,
           subtype: accountData.subtype! as string,
-          appwriteItemId: bank.$id,
-          sharaebleId: bank.shareableId,
+          appwriteItemId: bank.id,
+          sharaebleId: bank.shareable_id,
         };
 
         return account;
@@ -61,6 +54,7 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
     return parseStringify({ data: accounts, totalBanks, totalCurrentBalance });
   } catch (error) {
     console.error("An error occurred while getting the accounts:", error);
+    return null;
   }
 };
 
@@ -70,26 +64,31 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     // get bank from db
     const bank = await getBank({ documentId: appwriteItemId });
 
+    if (!bank) {
+      console.error('Bank not found');
+      return null;
+    }
+
     // get account info from plaid
     const accountsResponse = await plaidClient.accountsGet({
-      access_token: bank.accessToken,
+      access_token: bank.access_token,
     });
     const accountData = accountsResponse.data.accounts[0];
 
-    // get transfer transactions from appwrite
+    // get transfer transactions from supabase
     const transferTransactionsData = await getTransactionsByBankId({
-      bankId: bank.$id,
+      bankId: bank.id,
     });
 
     const transferTransactions = transferTransactionsData.documents.map(
       (transferData: Transaction) => ({
-        id: transferData.$id,
+        id: transferData.id,
         name: transferData.name!,
         amount: transferData.amount!,
-        date: transferData.$createdAt,
+        date: transferData.created_at,
         paymentChannel: transferData.channel,
         category: transferData.category,
-        type: transferData.senderBankId === bank.$id ? "debit" : "credit",
+        type: transferData.sender_bank_id === bank.id ? "debit" : "credit",
       })
     );
 
@@ -99,7 +98,7 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     });
 
     const transactions = await getTransactions({
-      accessToken: bank?.accessToken,
+      accessToken: bank?.access_token,
     });
 
     const account = {
@@ -112,11 +111,11 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
       mask: accountData.mask!,
       type: accountData.type as string,
       subtype: accountData.subtype! as string,
-      appwriteItemId: bank.$id,
+      appwriteItemId: bank.id,
     };
 
     // sort transactions by date such that the most recent transaction is first
-      const allTransactions = [...transactions, ...transferTransactions].sort(
+    const allTransactions = [...transactions, ...transferTransactions].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
@@ -126,6 +125,7 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     });
   } catch (error) {
     console.error("An error occurred while getting the account:", error);
+    return null;
   }
 };
 
@@ -144,6 +144,7 @@ export const getInstitution = async ({
     return parseStringify(intitution);
   } catch (error) {
     console.error("An error occurred while getting the accounts:", error);
+    return null;
   }
 };
 
@@ -182,5 +183,6 @@ export const getTransactions = async ({
     return parseStringify(transactions);
   } catch (error) {
     console.error("An error occurred while getting the accounts:", error);
+    return [];
   }
 };

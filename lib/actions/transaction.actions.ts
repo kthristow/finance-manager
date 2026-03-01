@@ -1,61 +1,72 @@
 "use server";
 
-import { ID, Query } from "node-appwrite";
-import { createAdminClient } from "../appwrite";
+import { createAdminClient } from "../supabase/server";
 import { parseStringify } from "../utils";
-
-const {
-  APPWRITE_DATABASE_ID: DATABASE_ID,
-  APPWRITE_TRANSACTION_COLLECTION_ID: TRANSACTION_COLLECTION_ID,
-} = process.env;
 
 export const createTransaction = async (transaction: CreateTransactionProps) => {
   try {
-    const { database } = await createAdminClient();
+    const supabase = await createAdminClient();
 
-    const newTransaction = await database.createDocument(
-      DATABASE_ID!,
-      TRANSACTION_COLLECTION_ID!,
-      ID.unique(),
-      {
+    const { data: newTransaction, error } = await supabase
+      .from('transactions')
+      .insert({
         channel: 'online',
         category: 'Transfer',
-        ...transaction
-      }
-    )
+        name: transaction.name,
+        amount: parseFloat(transaction.amount),
+        sender_id: transaction.senderId,
+        sender_bank_id: transaction.senderBankId,
+        receiver_id: transaction.receiverId,
+        receiver_bank_id: transaction.receiverBankId,
+        email: transaction.email,
+      })
+      .select()
+      .single();
+
+    if (error || !newTransaction) {
+      console.error('Error creating transaction:', error);
+      throw error;
+    }
 
     return parseStringify(newTransaction);
   } catch (error) {
-    console.log(error);
+    console.log('Error in createTransaction:', error);
+    return null;
   }
-}
+};
 
-export const getTransactionsByBankId = async ({bankId}: getTransactionsByBankIdProps) => {
+export const getTransactionsByBankId = async ({ bankId }: getTransactionsByBankIdProps) => {
   try {
-    const { database } = await createAdminClient();
+    const supabase = await createAdminClient();
 
-    const senderTransactions = await database.listDocuments(
-      DATABASE_ID!,
-      TRANSACTION_COLLECTION_ID!,
-      [Query.equal('senderBankId', bankId)],
-    )
+    // Get sender transactions
+    const { data: senderTransactions, error: senderError } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('sender_bank_id', bankId);
 
-    const receiverTransactions = await database.listDocuments(
-      DATABASE_ID!,
-      TRANSACTION_COLLECTION_ID!,
-      [Query.equal('receiverBankId', bankId)],
-    );
+    // Get receiver transactions
+    const { data: receiverTransactions, error: receiverError } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('receiver_bank_id', bankId);
+
+    if (senderError || receiverError) {
+      console.error('Error fetching transactions:', senderError || receiverError);
+      return { total: 0, documents: [] };
+    }
 
     const transactions = {
-      total: senderTransactions.total + receiverTransactions.total,
+      total: (senderTransactions?.length || 0) + (receiverTransactions?.length || 0),
       documents: [
-        ...senderTransactions.documents, 
-        ...receiverTransactions.documents,
-      ]
-    }
+        ...(senderTransactions || []),
+        ...(receiverTransactions || []),
+      ],
+    };
 
     return parseStringify(transactions);
   } catch (error) {
-    console.log(error);
+    console.log('Error in getTransactionsByBankId:', error);
+    return { total: 0, documents: [] };
   }
-}
+};
